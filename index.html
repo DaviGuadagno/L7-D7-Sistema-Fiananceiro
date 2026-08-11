@@ -117,6 +117,41 @@
   }
   .report-btn:hover{ border-color: var(--silver); }
 
+  .import-btn{
+    width:100%; padding: 13px; margin-bottom: 28px; border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--silver-bright);
+    font-family:'Oswald'; font-weight:600; text-transform:uppercase; letter-spacing:1px;
+    font-size: 13px; cursor:pointer; transition: all .15s; margin-top: -18px;
+  }
+  .import-btn:hover{ border-color: var(--silver); }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background: rgba(0,0,0,0.7);
+    z-index: 100; align-items:center; justify-content:center; padding: 20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    width:100%; max-width: 640px; max-height: 85vh; overflow-y:auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px;
+  }
+  .modal-box h2{ font-family:'Oswald'; font-size:16px; text-transform:uppercase; letter-spacing:1px; color: var(--silver-bright); margin-bottom: 8px; }
+  .modal-box p{ font-size: 12px; color: #8a8a8e; margin-bottom: 14px; line-height:1.6; }
+  .modal-box code{ background: var(--black); padding:1px 5px; border-radius:4px; font-size:11px; }
+  .modal-box textarea{
+    width:100%; min-height: 160px; background: var(--black); border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px; color: var(--white); font-family:monospace; font-size: 13px;
+    resize: vertical; margin-bottom: 14px;
+  }
+  .modal-box textarea:focus{ outline:none; border-color: var(--red-bright); }
+  .modal-actions{ display:flex; gap:10px; }
+  .modal-actions button{
+    flex:1; padding: 12px; border-radius: 8px; font-family:'Oswald'; font-weight:600;
+    text-transform:uppercase; letter-spacing:1px; font-size: 13px; cursor:pointer; border:none;
+  }
+  .modal-actions .confirm{ background: linear-gradient(135deg, var(--red-bright), var(--red)); color: white; }
+  .modal-actions .cancel{ background: var(--panel-2); border: 1px solid var(--line); color: var(--silver-bright); }
+  #importResult{ margin-top:14px; font-size:12px; color: var(--silver); white-space:pre-line; }
+
   /* PRINT REPORT — hidden on screen, shown only when printing */
   #reportPrint{ display:none; }
   @media print{
@@ -138,7 +173,7 @@
   }
 
   /* SUMMARY GRID */
-  .summary{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 30px; }
+  .summary{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 30px; }
   @media (max-width: 720px){ .summary{ grid-template-columns: repeat(2, 1fr); } }
   .card{
     background: linear-gradient(155deg, var(--panel-2), var(--panel));
@@ -199,6 +234,27 @@
     font-size: 14px; cursor:pointer; transition: filter .15s;
   }
   .submit-btn:hover{ filter: brightness(1.15); }
+
+  .pending-check{
+    display:flex; align-items:center; gap:10px; margin-top:14px;
+    padding: 10px 12px; border-radius: 8px; background: var(--panel-2);
+    border: 1px solid var(--line); cursor:pointer;
+  }
+  .pending-check input{ width:16px; height:16px; accent-color: var(--red-bright); cursor:pointer; }
+  .pending-check label{ font-size: 13px; color: var(--silver-bright); cursor:pointer; }
+
+  .badge-pending{
+    display:inline-block; font-size: 10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.5px; color: #d9a441; background: rgba(217,164,65,0.15);
+    border: 1px solid rgba(217,164,65,0.4); border-radius: 6px; padding: 2px 6px;
+    margin-left: 8px; vertical-align: middle;
+  }
+  .effectuate-btn{
+    background: rgba(217,164,65,0.15); border: 1px solid rgba(217,164,65,0.4); color: #d9a441;
+    padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight:600;
+    cursor:pointer; text-transform:uppercase; letter-spacing:0.5px; transition: all .15s;
+  }
+  .effectuate-btn:hover{ filter: brightness(1.15); }
 
   /* TABLE */
   .list h2{ font-family:'Oswald'; font-size:15px; text-transform:uppercase; letter-spacing:1px; color: var(--silver-bright); margin-bottom: 14px; }
@@ -261,11 +317,32 @@
 
   <button class="report-btn" onclick="generateReport()">📄 Gerar relatório do mês</button>
 
+  <button class="import-btn" onclick="openImportModal()">📋 Importar lançamentos em lote</button>
+
+  <div class="modal-overlay" id="importModal">
+    <div class="modal-box">
+      <h2>Importar lançamentos</h2>
+      <p>
+        Um lançamento por linha, nesse formato:<br>
+        <code>DD/MM | entrada ou saída | categoria | valor | responsável | pago ou pendente</code><br><br>
+        Ano assumido: <strong id="importYearLabel"></strong>. Exemplo:<br>
+        <code>15/07 | entrada | Mensalidades | 880 | CT | pago</code>
+      </p>
+      <textarea id="importText" placeholder="Cole aqui os lançamentos..."></textarea>
+      <div id="importResult"></div>
+      <div class="modal-actions">
+        <button class="cancel" onclick="closeImportModal()">Cancelar</button>
+        <button class="confirm" onclick="processImport()">Importar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="summary">
     <div class="card receita"><div class="label">Receita</div><div class="value" id="totalReceita">R$ 0</div></div>
     <div class="card despesa"><div class="label">Despesas</div><div class="value" id="totalDespesa">R$ 0</div></div>
     <div class="card lucro"><div class="label">Lucro Líquido</div><div class="value" id="lucroLiquido">R$ 0</div></div>
     <div class="card lucro"><div class="label">Margem</div><div class="value" id="margem">0%</div></div>
+    <div class="card lucro"><div class="label">Pendentes</div><div class="value" id="totalPendente" style="color:#d9a441;">R$ 0</div></div>
   </div>
 
   <div class="panel">
@@ -303,6 +380,10 @@
         <label>Descrição (opcional)</label>
         <input type="text" id="fDesc" placeholder="Ex: mensalidades turma manhã">
       </div>
+    </div>
+    <div class="pending-check" onclick="document.getElementById('fPendente').click()">
+      <input type="checkbox" id="fPendente" onclick="event.stopPropagation()">
+      <label for="fPendente">Marcar como pendente (valor ainda não confirmado)</label>
     </div>
     <button class="submit-btn" onclick="addEntry()">Adicionar lançamento</button>
   </div>
@@ -406,6 +487,7 @@ const dataInput = document.getElementById('fData');
 const catInput = document.getElementById('fCategoria');
 const descInput = document.getElementById('fDesc');
 const responsavelInput = document.getElementById('fResponsavel');
+const pendenteInput = document.getElementById('fPendente');
 
 const valor = parseFloat(valorInput.value);
 const data = dataInput.value || new Date().toISOString().slice(0,10);
@@ -433,12 +515,33 @@ category: category,
 description: descInput.value.trim(),
 value: valor,
 date: data,
-responsible: responsavelInput.value
+responsible: responsavelInput.value,
+status: pendenteInput.checked ? 'pendente' : 'efetivado'
 });
 
 await saveEntries();
 valorInput.value = '';
 descInput.value = '';
+pendenteInput.checked = false;
+render();
+}
+
+async function effectuateEntry(id){
+const entry = allEntries.find(e => e.id === id);
+if(!entry) return;
+
+const novoValor = prompt(`Valor final para "${entry.category}":`, entry.value);
+if(novoValor === null) return;
+
+const valor = parseFloat(novoValor);
+if(!valor || valor <= 0){
+alert('Informe um valor válido.');
+return;
+}
+
+entry.value = valor;
+entry.status = 'efetivado';
+await saveEntries();
 render();
 }
 
@@ -452,12 +555,16 @@ function render(){
 document.getElementById('monthLabel').textContent = fmtMonthLabel(viewDate);
 const mk = monthKey(viewDate);
 const monthEntries = allEntries.filter(e => e.date.startsWith(mk));
+const effectiveEntries = monthEntries.filter(e => e.status !== 'pendente');
+const pendingEntries = monthEntries.filter(e => e.status === 'pendente');
 
-const receita = monthEntries.filter(e=>e.type==='entrada').reduce((s,e)=>s+e.value,0);
-const despesa = monthEntries.filter(e=>e.type==='saida').reduce((s,e)=>s+e.value,0);
+const receita = effectiveEntries.filter(e=>e.type==='entrada').reduce((s,e)=>s+e.value,0);
+const despesa = effectiveEntries.filter(e=>e.type==='saida').reduce((s,e)=>s+e.value,0);
 const lucro = receita - despesa;
 const margem = receita > 0 ? (lucro/receita*100) : 0;
+const totalPendente = pendingEntries.reduce((s,e)=>s+e.value,0);
 
+document.getElementById('totalPendente').textContent = fmtMoney(totalPendente);
 document.getElementById('totalReceita').textContent = fmtMoney(receita);
 document.getElementById('totalDespesa').textContent = fmtMoney(despesa);
 document.getElementById('lucroLiquido').textContent = fmtMoney(lucro);
@@ -474,11 +581,12 @@ const sorted = [...monthEntries].sort((a,b)=> b.date.localeCompare(a.date));
 list.innerHTML = sorted.map(e => `
 <div class="entry ${e.type}">
 <div class="info">
-<div class="cat">${e.category}${e.description ? ' — ' + e.description : ''}</div>
+<div class="cat">${e.category}${e.description ? ' — ' + e.description : ''}${e.status === 'pendente' ? '<span class="badge-pending">Pendente</span>' : ''}</div>
 <div class="meta">${new Date(e.date + 'T00:00:00').toLocaleDateString('pt-BR')} · ${e.responsible || '—'}</div>
 </div>
 <div class="right">
 <div class="val">${e.type === 'entrada' ? '+' : '−'} ${fmtMoney(e.value)}</div>
+${e.status === 'pendente' ? `<button class="effectuate-btn" onclick="effectuateEntry('${e.id}')">Efetivar</button>` : ''}
 <button class="del" onclick="deleteEntry('${e.id}')">✕</button>
 </div>
 </div>
@@ -496,7 +604,8 @@ render();
 
 function generateReport(){
 const mk = monthKey(viewDate);
-const monthEntries = allEntries.filter(e => e.date.startsWith(mk));
+const monthEntries = allEntries.filter(e => e.date.startsWith(mk) && e.status !== 'pendente');
+const pendingEntries = allEntries.filter(e => e.date.startsWith(mk) && e.status === 'pendente');
 
 const entradas = monthEntries.filter(e=>e.type==='entrada');
 const saidas = monthEntries.filter(e=>e.type==='saida');
@@ -532,11 +641,102 @@ const html = `
 <div><span>Despesas totais</span><span>${fmtMoney(despesa)}</span></div>
 <div class="final"><span>Lucro líquido</span><span>${fmtMoney(lucro)}</span></div>
 <div><span>Margem</span><span>${margem.toFixed(1)}%</span></div>
+<div><span>Pendente (não contabilizado)</span><span>${fmtMoney(pendingEntries.reduce((s,e)=>s+e.value,0))}</span></div>
 </div>
 `;
 
 document.getElementById('reportPrint').innerHTML = html;
 window.print();
+}
+
+/* IMPORTAÇÃO EM LOTE */
+function openImportModal(){
+document.getElementById('importYearLabel').textContent = new Date().getFullYear();
+document.getElementById('importText').value = '';
+document.getElementById('importResult').textContent = '';
+document.getElementById('importModal').classList.add('open');
+}
+
+function closeImportModal(){
+document.getElementById('importModal').classList.remove('open');
+}
+
+async function processImport(){
+const raw = document.getElementById('importText').value.trim();
+const resultBox = document.getElementById('importResult');
+
+if(!raw){
+resultBox.textContent = 'Cole ao menos um lançamento.';
+return;
+}
+
+const year = new Date().getFullYear();
+const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+const novos = [];
+const erros = [];
+
+lines.forEach((line, idx) => {
+const parts = line.split('|').map(p => p.trim());
+if(parts.length < 6){
+erros.push(`Linha ${idx+1}: formato incompleto`);
+return;
+}
+
+const [dataStr, tipoStr, categoria, valorStr, responsavel, statusStr] = parts;
+
+const dataMatch = dataStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+if(!dataMatch){
+erros.push(`Linha ${idx+1}: data inválida ("${dataStr}")`);
+return;
+}
+const dd = dataMatch[1].padStart(2,'0');
+const mm = dataMatch[2].padStart(2,'0');
+const date = `${year}-${mm}-${dd}`;
+
+const tipoNorm = tipoStr.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+let type;
+if(tipoNorm === 'entrada') type = 'entrada';
+else if(tipoNorm === 'saida') type = 'saida';
+else{
+erros.push(`Linha ${idx+1}: tipo inválido ("${tipoStr}")`);
+return;
+}
+
+const valor = parseFloat(valorStr.replace(',', '.'));
+if(!valor || valor <= 0){
+erros.push(`Linha ${idx+1}: valor inválido ("${valorStr}")`);
+return;
+}
+
+const statusNorm = statusStr.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const status = statusNorm === 'pendente' ? 'pendente' : 'efetivado';
+
+novos.push({
+id: Date.now().toString() + '-' + idx,
+type: type,
+category: categoria,
+description: '',
+value: valor,
+date: date,
+responsible: responsavel,
+status: status
+});
+});
+
+if(novos.length === 0){
+resultBox.textContent = 'Nenhum lançamento válido encontrado.\n' + erros.join('\n');
+return;
+}
+
+allEntries.push(...novos);
+await saveEntries();
+render();
+
+let msg = `${novos.length} lançamento(s) importado(s) com sucesso.`;
+if(erros.length > 0) msg += `\n\nAvisos:\n${erros.join('\n')}`;
+resultBox.textContent = msg;
+
+setTimeout(() => { closeImportModal(); }, erros.length > 0 ? 3500 : 1200);
 }
 
 /* AUTENTICAÇÃO */
@@ -586,8 +786,12 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 window.setType = setType;
 window.toggleCustomCategory = toggleCustomCategory;
 window.addEntry = addEntry;
+window.effectuateEntry = effectuateEntry;
 window.deleteEntry = deleteEntry;
 window.generateReport = generateReport;
+window.openImportModal = openImportModal;
+window.closeImportModal = closeImportModal;
+window.processImport = processImport;
 </script>
 </body>
 </html>
