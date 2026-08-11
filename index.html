@@ -235,10 +235,26 @@
 
 <div id="reportPrint"></div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyBH-SowfWRzq3B6tQGUiM_woDFRexX8mDM',
+  authDomain: 'l7-d7-financeiro.firebaseapp.com',
+  projectId: 'l7-d7-financeiro',
+  storageBucket: 'l7-d7-financeiro.firebasestorage.app',
+  messagingSenderId: '537869501745',
+  appId: '1:537869501745:web:e38f78add8a93378f09c10'
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db, 'l7financeiro', 'lancamentos');
+
 const CATS = {
-  entrada: ["Mensalidades", "Personal / Aulas avulsas", "Eventos (L7 Day)", "Patrocínio", "Loja / Produtos", "Outros"],
-  saida: ["Aluguel de quadra", "Folha / Instrutores", "Manutenção", "Marketing", "Material esportivo", "Impostos", "Outros"]
+entrada: ['Mensalidades', 'Personal / Aulas avulsas', 'Eventos (L7 Day)', 'Patrocínio', 'Loja / Produtos', 'Outros'],
+saida: ['Aluguel de quadra', 'Folha / Instrutores', 'Manutenção', 'Marketing', 'Material esportivo', 'Impostos', 'Outros']
 };
 
 let currentType = 'entrada';
@@ -249,196 +265,205 @@ function pad(n){ return String(n).padStart(2,'0'); }
 function monthKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
 function fmtMoney(v){ return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
 function fmtMonthLabel(d){
-  return d.toLocaleDateString('pt-BR', {month:'long', year:'numeric'}).toUpperCase();
+return d.toLocaleDateString('pt-BR', {month:'long', year:'numeric'}).toUpperCase();
 }
 
 function setType(t){
-  currentType = t;
-  document.getElementById('btnEntrada').classList.toggle('active', t==='entrada');
-  document.getElementById('btnSaida').classList.toggle('active', t==='saida');
-  populateCategories();
+currentType = t;
+document.getElementById('btnEntrada').classList.toggle('active', t==='entrada');
+document.getElementById('btnSaida').classList.toggle('active', t==='saida');
+populateCategories();
 }
 
 function populateCategories(){
-  const sel = document.getElementById('fCategoria');
-  sel.innerHTML = '';
-  CATS[currentType].forEach(c=>{
-    const opt = document.createElement('option');
-    opt.value = c; opt.textContent = c;
-    sel.appendChild(opt);
-  });
-  const customOpt = document.createElement('option');
-  customOpt.value = '__custom__';
-  customOpt.textContent = 'Outra (digitar)';
-  sel.appendChild(customOpt);
-  toggleCustomCategory();
+const sel = document.getElementById('fCategoria');
+sel.innerHTML = '';
+CATS[currentType].forEach(c=>{
+const opt = document.createElement('option');
+opt.value = c; opt.textContent = c;
+sel.appendChild(opt);
+});
+const customOpt = document.createElement('option');
+customOpt.value = '__custom__';
+customOpt.textContent = 'Outra (digitar)';
+sel.appendChild(customOpt);
+toggleCustomCategory();
 }
 
 function toggleCustomCategory(){
-  const sel = document.getElementById('fCategoria');
-  const wrap = document.getElementById('fCategoriaCustomWrap');
-  wrap.style.display = sel.value === '__custom__' ? 'flex' : 'none';
+const sel = document.getElementById('fCategoria');
+const wrap = document.getElementById('fCategoriaCustomWrap');
+wrap.style.display = sel.value === '__custom__' ? 'flex' : 'none';
 }
 
 async function loadEntries(){
-  try{
-    const res = await window.storage.get('lancamentos', false);
-    allEntries = res ? JSON.parse(res.value) : [];
-  }catch(e){
-    allEntries = [];
-  }
-  render();
+try{
+const snap = await getDoc(docRef);
+allEntries = snap.exists() ? (snap.data().entries || []) : [];
+}catch(e){
+console.error('Erro ao carregar lançamentos', e);
+allEntries = [];
+}
+render();
 }
 
 async function saveEntries(){
-  try{
-    await window.storage.set('lancamentos', JSON.stringify(allEntries), false);
-  }catch(e){
-    console.error('Erro ao salvar', e);
-    alert('Não foi possível salvar. Tente novamente.');
-  }
+try{
+await setDoc(docRef, { entries: allEntries });
+}catch(e){
+console.error('Erro ao salvar', e);
+alert('Não foi possível salvar. Tente novamente.');
+}
 }
 
 async function addEntry(){
-  const valorInput = document.getElementById('fValor');
-  const dataInput = document.getElementById('fData');
-  const catInput = document.getElementById('fCategoria');
-  const descInput = document.getElementById('fDesc');
+const valorInput = document.getElementById('fValor');
+const dataInput = document.getElementById('fData');
+const catInput = document.getElementById('fCategoria');
+const descInput = document.getElementById('fDesc');
 
-  const valor = parseFloat(valorInput.value);
-  const data = dataInput.value || new Date().toISOString().slice(0,10);
+const valor = parseFloat(valorInput.value);
+const data = dataInput.value || new Date().toISOString().slice(0,10);
 
-  if(!valor || valor <= 0){
-    alert('Informe um valor válido.');
-    return;
-  }
+if(!valor || valor <= 0){
+alert('Informe um valor válido.');
+return;
+}
 
-  let category = catInput.value;
-  if(category === '__custom__'){
-    const customInput = document.getElementById('fCategoriaCustom');
-    category = customInput.value.trim();
-    if(!category){
-      alert('Descreva a categoria personalizada.');
-      return;
-    }
-    customInput.value = '';
-  }
+let category = catInput.value;
+if(category === '__custom__'){
+const customInput = document.getElementById('fCategoriaCustom');
+category = customInput.value.trim();
+if(!category){
+alert('Descreva a categoria personalizada.');
+return;
+}
+customInput.value = '';
+}
 
-  allEntries.push({
-    id: Date.now().toString(),
-    type: currentType,
-    category: category,
-    description: descInput.value.trim(),
-    value: valor,
-    date: data
-  });
+allEntries.push({
+id: Date.now().toString(),
+type: currentType,
+category: category,
+description: descInput.value.trim(),
+value: valor,
+date: data
+});
 
-  await saveEntries();
-  valorInput.value = '';
-  descInput.value = '';
-  render();
+await saveEntries();
+valorInput.value = '';
+descInput.value = '';
+render();
 }
 
 async function deleteEntry(id){
-  allEntries = allEntries.filter(e => e.id !== id);
-  await saveEntries();
-  render();
+allEntries = allEntries.filter(e => e.id !== id);
+await saveEntries();
+render();
 }
 
 function render(){
-  document.getElementById('monthLabel').textContent = fmtMonthLabel(viewDate);
-  const mk = monthKey(viewDate);
-  const monthEntries = allEntries.filter(e => e.date.startsWith(mk));
+document.getElementById('monthLabel').textContent = fmtMonthLabel(viewDate);
+const mk = monthKey(viewDate);
+const monthEntries = allEntries.filter(e => e.date.startsWith(mk));
 
-  const receita = monthEntries.filter(e=>e.type==='entrada').reduce((s,e)=>s+e.value,0);
-  const despesa = monthEntries.filter(e=>e.type==='saida').reduce((s,e)=>s+e.value,0);
-  const lucro = receita - despesa;
-  const margem = receita > 0 ? (lucro/receita*100) : 0;
+const receita = monthEntries.filter(e=>e.type==='entrada').reduce((s,e)=>s+e.value,0);
+const despesa = monthEntries.filter(e=>e.type==='saida').reduce((s,e)=>s+e.value,0);
+const lucro = receita - despesa;
+const margem = receita > 0 ? (lucro/receita*100) : 0;
 
-  document.getElementById('totalReceita').textContent = fmtMoney(receita);
-  document.getElementById('totalDespesa').textContent = fmtMoney(despesa);
-  document.getElementById('lucroLiquido').textContent = fmtMoney(lucro);
-  document.getElementById('lucroLiquido').style.color = lucro >= 0 ? '#e8e8ec' : '#e15a5a';
-  document.getElementById('margem').textContent = margem.toFixed(1) + '%';
+document.getElementById('totalReceita').textContent = fmtMoney(receita);
+document.getElementById('totalDespesa').textContent = fmtMoney(despesa);
+document.getElementById('lucroLiquido').textContent = fmtMoney(lucro);
+document.getElementById('lucroLiquido').style.color = lucro >= 0 ? '#e8e8ec' : '#e15a5a';
+document.getElementById('margem').textContent = margem.toFixed(1) + '%';
 
-  const list = document.getElementById('entriesList');
-  if(monthEntries.length === 0){
-    list.innerHTML = '<div class="empty">Nenhum lançamento neste mês ainda.</div>';
-    return;
-  }
+const list = document.getElementById('entriesList');
+if(monthEntries.length === 0){
+list.innerHTML = '<div class="empty">Nenhum lançamento neste mês ainda.</div>';
+return;
+}
 
-  const sorted = [...monthEntries].sort((a,b)=> b.date.localeCompare(a.date));
-  list.innerHTML = sorted.map(e => `
-    <div class="entry ${e.type}">
-      <div class="info">
-        <div class="cat">${e.category}${e.description ? ' — ' + e.description : ''}</div>
-        <div class="meta">${new Date(e.date + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-      </div>
-      <div class="right">
-        <div class="val">${e.type === 'entrada' ? '+' : '−'} ${fmtMoney(e.value)}</div>
-        <button class="del" onclick="deleteEntry('${e.id}')">✕</button>
-      </div>
-    </div>
-  `).join('');
+const sorted = [...monthEntries].sort((a,b)=> b.date.localeCompare(a.date));
+list.innerHTML = sorted.map(e => `
+<div class="entry ${e.type}">
+<div class="info">
+<div class="cat">${e.category}${e.description ? ' — ' + e.description : ''}</div>
+<div class="meta">${new Date(e.date + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+</div>
+<div class="right">
+<div class="val">${e.type === 'entrada' ? '+' : '−'} ${fmtMoney(e.value)}</div>
+<button class="del" onclick="deleteEntry('${e.id}')">✕</button>
+</div>
+</div>
+`).join('');
 }
 
 document.getElementById('prevMonth').onclick = ()=>{
-  viewDate.setMonth(viewDate.getMonth()-1);
-  render();
+viewDate.setMonth(viewDate.getMonth()-1);
+render();
 };
 document.getElementById('nextMonth').onclick = ()=>{
-  viewDate.setMonth(viewDate.getMonth()+1);
-  render();
+viewDate.setMonth(viewDate.getMonth()+1);
+render();
 };
 
 function generateReport(){
-  const mk = monthKey(viewDate);
-  const monthEntries = allEntries.filter(e => e.date.startsWith(mk));
+const mk = monthKey(viewDate);
+const monthEntries = allEntries.filter(e => e.date.startsWith(mk));
 
-  const entradas = monthEntries.filter(e=>e.type==='entrada');
-  const saidas = monthEntries.filter(e=>e.type==='saida');
+const entradas = monthEntries.filter(e=>e.type==='entrada');
+const saidas = monthEntries.filter(e=>e.type==='saida');
 
-  const receita = entradas.reduce((s,e)=>s+e.value,0);
-  const despesa = saidas.reduce((s,e)=>s+e.value,0);
-  const lucro = receita - despesa;
-  const margem = receita > 0 ? (lucro/receita*100) : 0;
+const receita = entradas.reduce((s,e)=>s+e.value,0);
+const despesa = saidas.reduce((s,e)=>s+e.value,0);
+const lucro = receita - despesa;
+const margem = receita > 0 ? (lucro/receita*100) : 0;
 
-  function byCategory(list){
-    const map = {};
-    list.forEach(e => { map[e.category] = (map[e.category] || 0) + e.value; });
-    return Object.entries(map).sort((a,b) => b[1]-a[1]);
-  }
-
-  function rows(list){
-    if(list.length === 0) return '<tr><td colspan="2" style="color:#888;">Nenhum lançamento</td></tr>';
-    return list.map(([cat, val]) => `<tr><td>${cat}</td><td>${fmtMoney(val)}</td></tr>`).join('');
-  }
-
-  const html = `
-    <h2>Team L7 — Relatório Financeiro</h2>
-    <div class="sub">${fmtMonthLabel(viewDate)} · gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
-
-    <h3>Receitas por categoria</h3>
-    <table>${rows(byCategory(entradas))}</table>
-
-    <h3>Despesas por categoria</h3>
-    <table>${rows(byCategory(saidas))}</table>
-
-    <div class="totals">
-      <div><span>Receita total</span><span>${fmtMoney(receita)}</span></div>
-      <div><span>Despesas totais</span><span>${fmtMoney(despesa)}</span></div>
-      <div class="final"><span>Lucro líquido</span><span>${fmtMoney(lucro)}</span></div>
-      <div><span>Margem</span><span>${margem.toFixed(1)}%</span></div>
-    </div>
-  `;
-
-  document.getElementById('reportPrint').innerHTML = html;
-  window.print();
+function byCategory(list){
+const map = {};
+list.forEach(e => { map[e.category] = (map[e.category] || 0) + e.value; });
+return Object.entries(map).sort((a,b) => b[1]-a[1]);
 }
+
+function rows(list){
+if(list.length === 0) return '<tr><td colspan="2" style="color:#888;">Nenhum lançamento</td></tr>';
+return list.map(([cat, val]) => `<tr><td>${cat}</td><td>${fmtMoney(val)}</td></tr>`).join('');
+}
+
+const html = `
+<h2>Team L7 — Relatório Financeiro</h2>
+<div class="sub">${fmtMonthLabel(viewDate)} · gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+
+<h3>Receitas por categoria</h3>
+<table>${rows(byCategory(entradas))}</table>
+
+<h3>Despesas por categoria</h3>
+<table>${rows(byCategory(saidas))}</table>
+
+<div class="totals">
+<div><span>Receita total</span><span>${fmtMoney(receita)}</span></div>
+<div><span>Despesas totais</span><span>${fmtMoney(despesa)}</span></div>
+<div class="final"><span>Lucro líquido</span><span>${fmtMoney(lucro)}</span></div>
+<div><span>Margem</span><span>${margem.toFixed(1)}%</span></div>
+</div>
+`;
+
+document.getElementById('reportPrint').innerHTML = html;
+window.print();
+}
+
+window.setType = setType;
+window.toggleCustomCategory = toggleCustomCategory;
+window.addEntry = addEntry;
+window.deleteEntry = deleteEntry;
+window.generateReport = generateReport;
 
 document.getElementById('fData').valueAsDate = new Date();
 populateCategories();
 loadEntries();
 </script>
+</body>
+</html>
 </body>
 </html>
