@@ -292,6 +292,14 @@
         <input type="date" id="fData">
       </div>
       <div class="field">
+        <label>Responsável</label>
+        <select id="fResponsavel">
+          <option value="Davi">Davi</option>
+          <option value="Guto">Guto</option>
+          <option value="CT">CT</option>
+        </select>
+      </div>
+      <div class="field full">
         <label>Descrição (opcional)</label>
         <input type="text" id="fDesc" placeholder="Ex: mensalidades turma manhã">
       </div>
@@ -397,6 +405,7 @@ const valorInput = document.getElementById('fValor');
 const dataInput = document.getElementById('fData');
 const catInput = document.getElementById('fCategoria');
 const descInput = document.getElementById('fDesc');
+const responsavelInput = document.getElementById('fResponsavel');
 
 const valor = parseFloat(valorInput.value);
 const data = dataInput.value || new Date().toISOString().slice(0,10);
@@ -423,7 +432,8 @@ type: currentType,
 category: category,
 description: descInput.value.trim(),
 value: valor,
-date: data
+date: data,
+responsible: responsavelInput.value
 });
 
 await saveEntries();
@@ -465,7 +475,7 @@ list.innerHTML = sorted.map(e => `
 <div class="entry ${e.type}">
 <div class="info">
 <div class="cat">${e.category}${e.description ? ' — ' + e.description : ''}</div>
-<div class="meta">${new Date(e.date + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+<div class="meta">${new Date(e.date + 'T00:00:00').toLocaleDateString('pt-BR')} · ${e.responsible || '—'}</div>
 </div>
 <div class="right">
 <div class="val">${e.type === 'entrada' ? '+' : '−'} ${fmtMoney(e.value)}</div>
